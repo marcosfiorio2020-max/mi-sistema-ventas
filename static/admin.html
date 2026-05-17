@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Mini SAP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .form-admin { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; max-width: 900px; margin-left: auto; margin-right: auto; }
+        h2 { margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        input, select { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; display: inline-block; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { opacity: 0.8; }
+        .scroll-table { max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { padding: 12px; background-color: #e9ecef; border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 1; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div style="text-align: right; margin-bottom: 20px; max-width: 900px; margin-left: auto; margin-right: auto;">
+        <button onclick="window.location.href='dashboard.html'" style="background-color: #6f42c1; color: white; padding: 12px 25px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+            📊 VER DASHBOARD EN TIEMPO REAL
+        </button>
+    </div>
+    
+    <div class="form-admin">
+        <h2 style="color: #333;">📦 Gestión de Productos (Nuevo Material)</h2>
+        <input type="text" id="inputID" placeholder="ID (ej: A005)" style="width: 15%;">
+        <input type="text" id="inputNombre" placeholder="Nombre del Producto" style="width: 30%;">
+        <input type="number" id="inputPrecio" placeholder="Precio Venta ($)" style="width: 15%;">
+        <input type="text" id="inputCategoria" placeholder="Categoría" style="width: 20%;"><br>
+        <input type="number" id="inputStock" placeholder="Stock Inicial" style="width: 15%;">
+        <input type="number" id="inputCosto" placeholder="Costo Proveedor ($)" style="width: 20%; border-color: #17a2b8;"> 
+        <select id="selectUnidad" style="width: 15%;">
+            <option value="Unidad">Unidad</option>
+            <option value="Kg">Kg</option>
+        </select>
+        <button onclick="guardarProducto()" style="width: 35%; background-color: #28a745;">GUARDAR PRODUCTO</button>
+    </div>
+
+    <div class="form-admin">
+        <h2 style="color: #0056b3;">🚚 Ingreso de Mercadería (Proveedor)</h2>
+        <select id="selectProductoStock" onchange="cargarPrecioActual()" style="width: 30%;">
+            <option value="">Cargando catálogo...</option>
+        </select>
+        <input type="number" id="inputCantidadStock" placeholder="Cant. recibida" style="width: 20%;">
+        <input type="number" id="inputNuevoCosto" placeholder="Nuevo Costo ($)" style="width: 20%; border-color: #17a2b8;">
+        <input type="number" id="inputNuevoPrecio" placeholder="Nuevo Precio ($)" style="width: 20%;">
+        <button onclick="sumarStock()" style="width: 100%; margin-top: 10px; background-color: #17a2b8;">SUMAR STOCK Y ACTUALIZAR</button>
+    </div>
+
+    <div class="form-admin">
+        <h2 style="color: #28a745;">📜 Historial de Tickets</h2>
+        <button onclick="cargarHistorialVentas()" style="background-color: #6c757d;">🔄 Actualizar Historial</button>
+        <div class="scroll-table">
+            <table>
+                <thead><tr><th>Ticket N°</th><th>Fecha y Hora</th><th>Método de Pago</th><th>Total</th></tr></thead>
+                <tbody id="tabla-ventas"><tr><td colspan="4" style="text-align: center;">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="form-admin">
+        <h2 style="color: #dc3545;">📋 Stock en Uso (Catálogo Activo)</h2>
+        <div class="scroll-table">
+            <table>
+                <thead><tr><th>ID</th><th>Nombre</th><th>Costo</th><th>Precio</th><th>Stock</th><th style="text-align: center;">Acción</th></tr></thead>
+                <tbody id="tabla-catalogo"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+        <button onclick="window.location.href='index.html'" style="margin-top: 25px; background-color: #333; width: 100%; padding: 15px; font-size: 16px;">⬅️ VOLVER AL MOSTRADOR</button>
+    </div>
+
+    <script>
+        let productosParaStock = [];
+
+        async function guardarProducto() {
+            let idProd = document.getElementById('inputID').value.trim();
+            let nombreProd = document.getElementById('inputNombre').value.trim();
+            let precioProd = parseFloat(document.getElementById('inputPrecio').value);
+            
+            // Si el cajero deja el costo en blanco, le ponemos 0 automático para que no de error
+            let valCosto = document.getElementById('inputCosto').value;
+            let costoProd = valCosto === "" ? 0 : parseFloat(valCosto);
+            
+            let valStock = document.getElementById('inputStock').value;
+            let stockProd = valStock === "" ? 0 : parseFloat(valStock);
+
+            if (!idProd || !nombreProd) return alert("❌ ERROR: El ID y Nombre son obligatorios.");
+            if (isNaN(precioProd) || precioProd <= 0) return alert("❌ ERROR: El precio de venta debe ser mayor a 0.");
+            if (costoProd < 0) return alert("❌ ERROR: El costo no puede ser negativo.");
+
+            const nuevoProducto = {
+                id: idProd,
+                nombre: nombreProd,
+                precio: precioProd,
+                unidad: document.getElementById('selectUnidad').value,
+                categoria: document.getElementById('inputCategoria').value || "General",
+                stock: stockProd,
+                costo: costoProd 
+            };
+
+            try {
+                const r = await fetch('/api/admin/productos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(nuevoProducto)
+                });
+                const res = await r.json();
+                if(res.status === "success") {
+                    alert("✅ Producto guardado correctamente");
+                    document.querySelectorAll('input').forEach(i => i.value = ''); // Limpia todo
+                    cargarCatalogoAdmin();
+                    cargarDropdownStock();
+                }
+            } catch (e) { alert("Error de servidor."); }
+        }
+
+       async function cargarDropdownStock() {
+            const r = await fetch('/api/productos');
+            const d = await r.json();
+            productosParaStock = d.productos;
+            document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
+                d.productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
+        }
+
+        function cargarPrecioActual() {
+            let id = document.getElementById('selectProductoStock').value;
+            let p = productosParaStock.find(x => x.id === id);
+            document.getElementById('inputNuevoPrecio').value = p ? p.precio : '';
+            document.getElementById('inputNuevoCosto').value = p ? p.costo : '';
+        }
+
+        async function sumarStock() {
+            let id = document.getElementById('selectProductoStock').value;
+            let cant = parseFloat(document.getElementById('inputCantidadStock').value);
+            let nPrecio = parseFloat(document.getElementById('inputNuevoPrecio').value);
+            let nCosto = parseFloat(document.getElementById('inputNuevoCosto').value);
+
+            if (!id || isNaN(cant) || cant <= 0 || isNaN(nPrecio) || isNaN(nCosto)) return alert("Completa todos los campos");
+
+            try {
+                const r = await fetch('/api/admin/stock', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id_producto: id, cantidad: cant, nuevo_precio: nPrecio, nuevo_costo: nCosto })
+                });
+                if((await r.json()).status === 'success') {
+                    alert("✅ Stock actualizado");
+                    document.getElementById('inputCantidadStock').value = '';
+                    document.getElementById('selectProductoStock').value = '';
+                    cargarDropdownStock();
+                    cargarCatalogoAdmin();
+                }
+            } catch (e) { alert("Error de servidor"); }
+        }
+
+        async function cargarHistorialVentas() {
+            const r = await fetch('/api/admin/ventas');
+            const d = await r.json();
+            document.getElementById('tabla-ventas').innerHTML = d.ventas.length === 0 ? 
+                '<tr><td colspan="4" style="text-align:center;">No hay ventas</td></tr>' :
+                d.ventas.map(v => `<tr><td><b>#${v.id}</b></td><td>${v.fecha}</td><td>${v.metodo}</td><td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td></tr>`).join('');
+        }
+
+       async function cargarCatalogoAdmin() {
+            const r = await fetch('/api/productos');
+            const d = await r.json();
+            document.getElementById('tabla-catalogo').innerHTML = d.productos.map(p => `
+                <tr>
+                    <td>${p.id}</td><td><b>${p.nombre}</b></td><td style="color:#17a2b8;">$${p.costo}</td><td>$${p.precio}</td>
+                    <td style="color: ${p.stock <= 5 ? 'red' : 'black'}; font-weight: bold;">${Number(p.stock.toFixed(3))}</td>
+                    <td style="text-align: center;"><button onclick="eliminarProducto('${p.id}')" style="background: #dc3545; padding: 4px 8px; color: white; border: none; border-radius: 4px; cursor: pointer;">Eliminar</button></td>
+                </tr>`).join('');
+        }
+
+        async function eliminarProducto(id) {
+            if (!confirm("¿Eliminar este material?")) return;
+            await fetch(`/api/admin/productos/${id}`, { method: 'DELETE' });
+            cargarCatalogoAdmin(); cargarDropdownStock(); 
+        }
+
+        cargarDropdownStock(); cargarHistorialVentas(); cargarCatalogoAdmin();
+    </script>
+</body>
+</html>

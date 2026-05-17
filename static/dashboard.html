@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Estratégico - Mini SAP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f7fa;
+            --card-bg: #ffffff;
+            --primary: #6f42c1;
+            --success: #28a745;
+            --danger: #dc3545;
+            --text-main: #1a1d23;
+            --text-muted: #64748b;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-color); 
+            margin: 0; 
+            padding: 24px; 
+            color: var(--text-main);
+        }
+
+        /* Navegación */
+        .nav-bar { 
+            background-color: #1e293b; 
+            padding: 16px 24px; 
+            border-radius: 12px; 
+            margin-bottom: 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .nav-bar h1 { color: white; margin: 0; font-size: 18px; font-weight: 700; }
+        .btn-nav { background-color: #334155; color: white; padding: 10px 18px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+
+        /* Grillas y Tarjetas */
+        .grilla-kpi { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 24px; 
+        }
+        .tarjeta { 
+            background: var(--card-bg); 
+            padding: 24px; 
+            border-radius: 12px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        .tarjeta h3 { margin: 0 0 12px 0; color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 700; }
+        .tarjeta .valor { font-size: 32px; font-weight: 700; color: var(--text-main); }
+
+        /* Barras de Progreso Integradas */
+        .barra-contenedor { width: 100%; background-color: #f1f5f9; border-radius: 20px; height: 12px; overflow: hidden; margin-top: 8px; border: 1px solid #e2e8f0; }
+        .barra-relleno { height: 100%; width: 0%; transition: width 1s ease, background-color 0.5s; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 9px; }
+
+        .meta-info-chica { font-size: 11px; color: var(--text-muted); margin-top: 12px; display: block; }
+
+        /* Layout */
+        .grid-mitad { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+
+        /* Formularios */
+        .formulario-inline { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        input, select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+        .btn-accion { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; }
+
+        /* EERR Styling */
+        .eerr-fila { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .eerr-resultado { font-size: 20px; font-weight: 800; border-top: 2px solid #1e293b; margin-top: 12px; padding-top: 16px; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            #zona-impresion { display: block !important; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar no-print">
+        <h1>📊 PANEL DE CONTROL EJECUTIVO</h1>
+        <div>
+            <button class="btn-nav" onclick="window.location.href='index.html'">🛒 Mostrador</button>
+            <button class="btn-nav" onclick="window.location.href='admin.html'">⚙️ Administración</button>
+        </div>
+    </div>
+
+    <div class="tarjeta no-print" style="margin-bottom: 20px; border: 1px dashed #cbd5e1; padding: 16px;">
+        <h3>⚙️ Ajustar Objetivos de Venta</h3>
+        <div class="formulario-inline">
+           <input type="text" id="inputMetaDiaria" placeholder="Meta Diaria ($)" onkeyup="formatoMiles(this)">
+           <input type="text" id="inputMetaMensual" placeholder="Meta Mensual ($)" onkeyup="formatoMiles(this); calcularMetaDiaria()">
+            <button class="btn-accion" style="background-color: #0f172a;" onclick="guardarConfiguracion()">💾 Guardar Metas</button>
+        </div>
+    </div>
+
+    <div class="grilla-kpi no-print">
+        <div class="tarjeta">
+            <h3>Facturación Hoy</h3>
+            <div class="valor" id="val-ingreso-hoy">$0</div>
+            <span class="meta-info-chica" id="val-tickets">Tickets: 0</span>
+        </div>
+
+        <div class="tarjeta" style="border-bottom: 4px solid var(--success);">
+            <h3>Ganancia Neta Hoy</h3>
+            <div class="valor" id="val-ganancia-hoy" style="color: var(--success);">$0</div>
+            
+            <div style="margin-top: 12px;">
+                <span class="meta-info-chica">Progreso de Meta: <strong id="meta-text-dia">$0</strong></span>
+                <div class="barra-contenedor">
+                    <div id="barra-dia" class="barra-relleno" style="background-color: var(--danger);">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <h3>Ticket Promedio</h3>
+            <div class="valor" id="val-ticket-promedio">$0</div>
+            <span class="meta-info-chica">Promedio por cliente</span>
+        </div>
+
+        <div class="tarjeta" style="border-bottom: 4px solid var(--primary);">
+            <h3>Ganancia Neta Mes</h3>
+            <div class="valor" id="val-ganancia-mes" style="color: var(--primary);">$0</div>
+            
+            <div style="margin-top: 12px;">
+                <span class="meta-info-chica">Objetivo Mensual: <strong id="meta-text-mes">$0</strong></span>
+                <div class="barra-contenedor">
+                    <div id="barra-mes" class="barra-relleno" style="background-color: var(--danger);">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-mitad no-print">
+        <div class="tarjeta">
+            <h3>🏆 Inteligencia de Productos</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4 style="font-size: 11px; color: #3b82f6;">🔥 TOP UNIDADES</h4>
+                    <table id="lista-volumen"></table>
+                </div>
+                <div>
+                    <h4 style="font-size: 11px; color: var(--success);">💸 TOP RENTABILIDAD</h4>
+                    <table id="lista-ganancia"></table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <h3>📅 Vencimientos Próximos</h3>
+            <div class="formulario-inline">
+                <input type="date" id="cal-fecha" style="width: 120px;">
+                <select id="cal-tipo">
+                    <option value="Pago">Pago</option>
+                    <option value="Cobro">Cobro</option>
+                </select>
+                <input type="number" id="cal-monto" placeholder="$" style="width: 80px;">
+                <input type="text" id="cal-desc" placeholder="Detalle..." style="flex-grow: 1;">
+                <button class="btn-accion" style="background-color: var(--danger);" onclick="agregarEvento()">+</button>
+            </div>
+            <div style="max-height: 200px; overflow-y: auto;">
+                <table id="tabla-calendario"></table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top: 24px; border-top: 4px solid #1e293b;">
+        <h3 class="no-print">📈 Análisis de Resultados (EERR)</h3>
+        <div class="formulario-inline no-print">
+            <input type="date" id="eerr-inicio">
+            <input type="date" id="eerr-fin">
+            <button class="btn-accion" style="background-color: #0284c7;" onclick="generarEERR()">Generar</button>
+            <button class="btn-accion" style="background-color: #64748b;" onclick="window.print()">🖨️ Imprimir PDF</button>
+        </div>
+
+        <div id="zona-impresion" style="display: none; margin-top: 20px;">
+            <h2 style="text-align: center;">ESTADO DE RESULTADOS</h2>
+            <p id="lbl-periodo" style="text-align: center; font-size: 14px; color: var(--text-muted);"></p>
+            
+            <div class="eerr-fila"><span>Ingresos Totales (Ventas)</span><span id="lbl-ingresos">$0.00</span></div>
+            <div class="eerr-fila" style="color: var(--danger);"><span>(-) Costo de Mercadería Vendida (CMV)</span><span id="lbl-cmv">-$0.00</span></div>
+            <div class="eerr-fila" style="background: #f8fafc;"><strong>GANANCIA BRUTA</strong><strong id="lbl-bruta">$0.00</strong></div>
+            <div class="eerr-fila" style="color: var(--danger);"><span>(-) Gastos Generales (Pagos en Calendario)</span><span id="lbl-gastos">-$0.00</span></div>
+            <div class="eerr-fila eerr-resultado"><strong>UTILIDAD NETA FINAL</strong><strong id="lbl-neta">$0.00</strong></div>
+        </div>
+    </div>
+
+    <script>
+        function actualizarBarra(idBarra, actual, meta) {
+            let porcentaje = (actual / meta) * 100;
+            let barra = document.getElementById(idBarra);
+            let ancho = porcentaje > 100 ? 100 : (porcentaje < 0 ? 0 : porcentaje);
+            barra.style.width = ancho + "%";
+            barra.innerText = porcentaje.toFixed(0) + "%";
+            
+            if (porcentaje < 100) barra.style.backgroundColor = "#ef4444";
+            else if (porcentaje < 120) barra.style.backgroundColor = "#22c55e";
+            else barra.style.backgroundColor = "#8b5cf6";
+        }
+// Función para agregar los puntos de miles estilo argentino/latino (Ej: 5.000.000)
+        function formatoMiles(input) {
+            // Quita todo lo que no sea número
+            let valorNum = input.value.replace(/\D/g, '');
+            if (valorNum === '') {
+                input.value = '';
+                return;
+            }
+            // Vuelve a poner el número pero formateado con puntos
+            input.value = parseInt(valorNum, 10).toLocaleString('es-AR');
+        }
+
+        // Calcula la diaria automáticamente
+        function calcularMetaDiaria() {
+            // Leemos el mes y le quitamos los puntos para poder hacer la división
+            let metaMesStr = document.getElementById('inputMetaMensual').value.replace(/\./g, '');
+            let metaMes = parseFloat(metaMesStr) || 0;
+            
+            // Dividimos por 30 días (puedes cambiarlo a 24 si no trabajas domingos)
+            let metaDiaria = Math.round(metaMes / 30); 
+            
+            // Lo escribimos en la caja diaria ya con sus puntitos
+            document.getElementById('inputMetaDiaria').value = metaDiaria.toLocaleString('es-AR');
+        }
+        async function cargarDashboard() {
+            try {
+                const resp = await fetch('/api/dashboard');
+                const d = await resp.json();
+
+                document.getElementById('val-ingreso-hoy').innerText = "$" + d.hoy.ingreso.toLocaleString();
+                document.getElementById('val-ganancia-hoy').innerText = "$" + d.hoy.ganancia.toLocaleString();
+                document.getElementById('val-ganancia-mes').innerText = "$" + d.mes.ganancia.toLocaleString();
+                document.getElementById('val-tickets').innerText = "Tickets: " + d.hoy.tickets;
+                document.getElementById('val-ticket-promedio').innerText = "$" + d.hoy.ticket_promedio.toFixed(2);
+                
+                document.getElementById('meta-text-dia').innerText = "$" + d.metas.diaria.toLocaleString();
+                document.getElementById('meta-text-mes').innerText = "$" + d.metas.costos_fijos_mes.toLocaleString();
+                
+                actualizarBarra("barra-dia", d.hoy.ganancia, d.metas.diaria);
+                actualizarBarra("barra-mes", d.mes.ganancia, d.metas.costos_fijos_mes);
+
+              // Agregamos .toLocaleString('es-AR') para que carguen con el formato
+            document.getElementById('inputMetaDiaria').value = d.metas.diaria.toLocaleString('es-AR');
+            document.getElementById('inputMetaMensual').value = d.metas.costos_fijos_mes.toLocaleString('es-AR');
+
+                document.getElementById('lista-volumen').innerHTML = d.top_volumen.map(p => `<tr><td>${p.nombre}</td><td><b>${p.cantidad}u</b></td></tr>`).join('');
+                document.getElementById('lista-ganancia').innerHTML = d.top_ganancia.map(p => `<tr><td>${p.nombre}</td><td><b style="color:var(--success)">$${p.ganancia.toFixed(0)}</b></td></tr>`).join('');
+            } catch (e) {
+                console.error("Esperando al servidor...");
+            }
+        }
+
+        async function guardarConfiguracion() {
+            // 1. Atrapamos el valor y le quitamos todos los puntos
+            let valDiaria = document.getElementById('inputMetaDiaria').value.replace(/\./g, '');
+            let valMensual = document.getElementById('inputMetaMensual').value.replace(/\./g, '');
+
+            // 2. Lo convertimos a número para mandarlo
+            const config = {
+                meta_diaria: parseFloat(valDiaria) || 50000,
+                meta_mensual: parseFloat(valMensual) || 500000
+            };
+            
+            // ... el resto de la función (el fetch) queda igualito ...
+            await fetch('/api/configuracion', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+            alert("Metas actualizadas");
+            cargarDashboard();
+        }
+        async function cargarCalendario() {
+            const r = await fetch('/api/calendario');
+            const d = await r.json();
+            const tabla = document.getElementById('tabla-calendario');
+            tabla.innerHTML = d.eventos.map(e => `
+                <tr>
+                    <td>${e.fecha}</td>
+                    <td style="color:${e.tipo === 'Cobro' ? '#22c55e' : '#ef4444'}"><b>${e.tipo}</b></td>
+                    <td>${e.descripcion}</td>
+                    <td><b>$${e.monto}</b></td>
+                    <td><button class="btn-accion" style="background:#22c55e; padding:4px 8px" onclick="saldarEvento(${e.id})">OK</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function agregarEvento() {
+            const ev = {
+                fecha: document.getElementById('cal-fecha').value,
+                tipo: document.getElementById('cal-tipo').value,
+                monto: parseFloat(document.getElementById('cal-monto').value) || 0,
+                descripcion: document.getElementById('cal-desc').value
+            };
+            if(!ev.fecha || ev.monto <= 0) return alert("Completa fecha y monto");
+            
+            await fetch('/api/calendario', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(ev)
+            });
+            cargarCalendario();
+        }
+
+        async function saldarEvento(id) {
+            await fetch(`/api/calendario/${id}/saldar`, { method: 'PUT' });
+            cargarCalendario();
+        }
+
+        async function generarEERR() {
+            const inicio = document.getElementById('eerr-inicio').value;
+            const fin = document.getElementById('eerr-fin').value;
+            if(!inicio || !fin) return alert("Selecciona las fechas");
+            
+            const r = await fetch(`/api/reporte/eerr?inicio=${inicio}&fin=${fin}`);
+            const d = await r.json();
+            document.getElementById('zona-impresion').style.display = 'block';
+            document.getElementById('lbl-periodo').innerText = `Período: ${inicio} al ${fin}`;
+            document.getElementById('lbl-ingresos').innerText = "$" + d.ingresos.toLocaleString();
+            document.getElementById('lbl-cmv').innerText = "-$" + d.cmv.toLocaleString();
+            document.getElementById('lbl-bruta').innerText = "$" + d.ganancia_bruta.toLocaleString();
+            document.getElementById('lbl-gastos').innerText = "-$" + d.gastos.toLocaleString();
+            document.getElementById('lbl-neta').innerText = "$" + d.ganancia_neta.toLocaleString();
+            document.getElementById('lbl-neta').style.color = d.ganancia_neta >= 0 ? '#22c55e' : '#ef4444';
+        }
+
+        cargarDashboard();
+        cargarCalendario();
+        setInterval(cargarDashboard, 15000);
+    </script>
+</body>
+</html>
