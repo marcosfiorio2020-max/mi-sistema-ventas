@@ -40,6 +40,14 @@
         .btn-billetera { background-color: #009ee3; } 
         .btn-tarjeta { background-color: #f39c12; } 
         .btn-cancelar { margin-top: 25px; padding: 10px 20px; border: none; background-color: #dc3545; color: white; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        /* Adaptación para celulares */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; }
+            .catalogo { flex: none; width: 100%; }
+            .carrito { flex: none; width: 100%; border-left: none; border-top: 2px solid #ddd; }
+            .grilla-productos { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+            .modal-contenido { width: 90%; padding: 20px; }
+        }
     </style>
 </head>
 <body>
