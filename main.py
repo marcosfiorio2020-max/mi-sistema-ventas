@@ -10,7 +10,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
 # Guardamos tu link secreto
-URL_BASE_DATOS = "postgresql://postgres:Pericles.12021985@db.xvhkgfmomzyqknudiuum.supabase.co:5432/postgres"
+URL_BASE_DATOS = "postgresql://postgres.xvhkgfmomzyqknudiuum:TU_CONTRASEÑA_AQUI@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
 
 app = FastAPI()
 
