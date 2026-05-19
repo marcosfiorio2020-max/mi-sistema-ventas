@@ -86,7 +86,7 @@
     <div class="nav-bar no-print">
         <h1>📊 PANEL DE CONTROL EJECUTIVO</h1>
         <div>
-            <button class="btn-nav" onclick="window.location.href='/'">🛒 Mostrador</button>
+            <button class="btn-nav" onclick="window.location.href='/mostrador'">🛒 Mostrador</button>
             <button class="btn-nav" onclick="window.location.href='admin.html'">⚙️ Administración</button>
         </div>
     </div>
@@ -193,6 +193,12 @@
     </div>
 
     <script>
+        // 1. Control de seguridad: Sacamos el pasaporte de la memoria
+        const mi_empresa = localStorage.getItem("mi_empresa_id");
+        if (!mi_empresa) {
+            window.location.href = "/";
+        }
+
         function actualizarBarra(idBarra, actual, meta) {
             let porcentaje = (actual / meta) * 100;
             let barra = document.getElementById(idBarra);
@@ -204,33 +210,27 @@
             else if (porcentaje < 120) barra.style.backgroundColor = "#22c55e";
             else barra.style.backgroundColor = "#8b5cf6";
         }
-// Función para agregar los puntos de miles estilo argentino/latino (Ej: 5.000.000)
+
         function formatoMiles(input) {
-            // Quita todo lo que no sea número
             let valorNum = input.value.replace(/\D/g, '');
             if (valorNum === '') {
                 input.value = '';
                 return;
             }
-            // Vuelve a poner el número pero formateado con puntos
             input.value = parseInt(valorNum, 10).toLocaleString('es-AR');
         }
 
-        // Calcula la diaria automáticamente
         function calcularMetaDiaria() {
-            // Leemos el mes y le quitamos los puntos para poder hacer la división
             let metaMesStr = document.getElementById('inputMetaMensual').value.replace(/\./g, '');
             let metaMes = parseFloat(metaMesStr) || 0;
-            
-            // Dividimos por 30 días (puedes cambiarlo a 24 si no trabajas domingos)
             let metaDiaria = Math.round(metaMes / 30); 
-            
-            // Lo escribimos en la caja diaria ya con sus puntitos
             document.getElementById('inputMetaDiaria').value = metaDiaria.toLocaleString('es-AR');
         }
+
         async function cargarDashboard() {
             try {
-                const resp = await fetch('/api/dashboard');
+                // AGREGAMOS EL PASAPORTE AQUÍ
+                const resp = await fetch('/api/dashboard?empresa_id=' + mi_empresa);
                 const d = await resp.json();
 
                 document.getElementById('val-ingreso-hoy').innerText = "$" + d.hoy.ingreso.toLocaleString();
@@ -245,9 +245,8 @@
                 actualizarBarra("barra-dia", d.hoy.ganancia, d.metas.diaria);
                 actualizarBarra("barra-mes", d.mes.ganancia, d.metas.costos_fijos_mes);
 
-              // Agregamos .toLocaleString('es-AR') para que carguen con el formato
-            document.getElementById('inputMetaDiaria').value = d.metas.diaria.toLocaleString('es-AR');
-            document.getElementById('inputMetaMensual').value = d.metas.costos_fijos_mes.toLocaleString('es-AR');
+                document.getElementById('inputMetaDiaria').value = d.metas.diaria.toLocaleString('es-AR');
+                document.getElementById('inputMetaMensual').value = d.metas.costos_fijos_mes.toLocaleString('es-AR');
 
                 document.getElementById('lista-volumen').innerHTML = d.top_volumen.map(p => `<tr><td>${p.nombre}</td><td><b>${p.cantidad}u</b></td></tr>`).join('');
                 document.getElementById('lista-ganancia').innerHTML = d.top_ganancia.map(p => `<tr><td>${p.nombre}</td><td><b style="color:var(--success)">$${p.ganancia.toFixed(0)}</b></td></tr>`).join('');
@@ -257,18 +256,16 @@
         }
 
         async function guardarConfiguracion() {
-            // 1. Atrapamos el valor y le quitamos todos los puntos
             let valDiaria = document.getElementById('inputMetaDiaria').value.replace(/\./g, '');
             let valMensual = document.getElementById('inputMetaMensual').value.replace(/\./g, '');
 
-            // 2. Lo convertimos a número para mandarlo
             const config = {
                 meta_diaria: parseFloat(valDiaria) || 50000,
                 meta_mensual: parseFloat(valMensual) || 500000
             };
             
-            // ... el resto de la función (el fetch) queda igualito ...
-            await fetch('/api/configuracion', {
+            // AGREGAMOS EL PASAPORTE AQUÍ
+            await fetch('/api/configuracion?empresa_id=' + mi_empresa, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(config)
@@ -276,8 +273,10 @@
             alert("Metas actualizadas");
             cargarDashboard();
         }
+
         async function cargarCalendario() {
-            const r = await fetch('/api/calendario');
+            // AGREGAMOS EL PASAPORTE AQUÍ
+            const r = await fetch('/api/calendario?empresa_id=' + mi_empresa);
             const d = await r.json();
             const tabla = document.getElementById('tabla-calendario');
             tabla.innerHTML = d.eventos.map(e => `
@@ -300,7 +299,8 @@
             };
             if(!ev.fecha || ev.monto <= 0) return alert("Completa fecha y monto");
             
-            await fetch('/api/calendario', {
+            // AGREGAMOS EL PASAPORTE AQUÍ
+            await fetch('/api/calendario?empresa_id=' + mi_empresa, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(ev)
@@ -309,7 +309,8 @@
         }
 
         async function saldarEvento(id) {
-            await fetch(`/api/calendario/${id}/saldar`, { method: 'PUT' });
+            // AGREGAMOS EL PASAPORTE AQUÍ
+            await fetch('/api/calendario/' + id + '/saldar?empresa_id=' + mi_empresa, { method: 'PUT' });
             cargarCalendario();
         }
 
@@ -318,7 +319,8 @@
             const fin = document.getElementById('eerr-fin').value;
             if(!inicio || !fin) return alert("Selecciona las fechas");
             
-            const r = await fetch(`/api/reporte/eerr?inicio=${inicio}&fin=${fin}`);
+            // AGREGAMOS EL PASAPORTE AQUÍ
+            const r = await fetch('/api/reporte/eerr?inicio=' + inicio + '&fin=' + fin + '&empresa_id=' + mi_empresa);
             const d = await r.json();
             document.getElementById('zona-impresion').style.display = 'block';
             document.getElementById('lbl-periodo').innerText = `Período: ${inicio} al ${fin}`;

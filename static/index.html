@@ -83,19 +83,27 @@
     </div>
 
     <script>
+        // Sacamos el pasaporte de la memoria del celular/PC
+        const mi_empresa = localStorage.getItem("mi_empresa_id");
+        
+        // Si no tiene pasaporte, lo pateamos a la puerta (Login)
+        if (!mi_empresa) {
+            window.location.href = "/"; 
+        }
         let todosLosProductos = []; 
         let carrito = []; 
 
         async function cargarProductos() {
             try {
-                let r = await fetch('/api/productos');
-                let d = await r.json();
-                todosLosProductos = d.productos;
+                let respuesta = await fetch('/api/productos?empresa_id=' + mi_empresa);
+                let d = await respuesta.json(); // Corregimos "r" por "respuesta"
+                todosLosProductos = d; // Corregimos para leer la lista directa que manda Python
                 dibujarBotonesCategorias(); 
                 mostrarCategoria('Todos'); 
-            } catch (e) { console.error("Error al cargar el catálogo"); }
+            } catch (e) { 
+                console.error("Detalle del error:", e); 
+            }
         }
-
         function dibujarBotonesCategorias() {
             const cont = document.getElementById('contenedor-categorias');
             cont.innerHTML = `<button class="btn-categoria" id="btn-cat-Todos" onclick="mostrarCategoria('Todos')">📦 Todos</button>`;
@@ -212,7 +220,7 @@
         async function procesarPago(metodo) {
             let total = carrito.reduce((s, i) => s + i.subtotal, 0);
             try {
-                let r = await fetch('/api/ventas', {
+                let r = await fetch('/api/ventas?empresa_id=' + mi_empresa, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ metodo_pago: metodo, total: total, detalles: carrito })
                 });

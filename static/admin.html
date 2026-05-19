@@ -69,10 +69,17 @@
                 <tbody id="tabla-catalogo"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
             </table>
         </div>
-        <button onclick="window.location.href='/'" style="margin-top: 25px; background-color: #333; width: 100%; padding: 15px; font-size: 16px;">⬅️ VOLVER AL MOSTRADOR</button>
+        <button onclick="window.location.href='/mostrador'" style="margin-top: 25px; background-color: #333; width: 100%; padding: 15px; font-size: 16px;">⬅️ VOLVER AL MOSTRADOR</button>
     </div>
 
     <script>
+    
+        // 1. EL CONTROL DE SEGURIDAD (Sacamos el pasaporte)
+        const mi_empresa = localStorage.getItem("mi_empresa_id");
+        if (!mi_empresa) {
+            window.location.href = "/"; // Si no hay pasaporte, al login
+        }
+
         let productosParaStock = [];
 
         async function guardarProducto() {
@@ -80,7 +87,6 @@
             let nombreProd = document.getElementById('inputNombre').value.trim();
             let precioProd = parseFloat(document.getElementById('inputPrecio').value);
             
-            // Si el cajero deja el costo en blanco, le ponemos 0 automático para que no de error
             let valCosto = document.getElementById('inputCosto').value;
             let costoProd = valCosto === "" ? 0 : parseFloat(valCosto);
             
@@ -98,7 +104,8 @@
                 unidad: document.getElementById('selectUnidad').value,
                 categoria: document.getElementById('inputCategoria').value || "General",
                 stock: stockProd,
-                costo: costoProd 
+                costo: costoProd,
+                empresa_id: mi_empresa // ¡AQUÍ AGREGAMOS EL PASAPORTE AL GUARDAR!
             };
 
             try {
@@ -114,15 +121,16 @@
                     cargarCatalogoAdmin();
                     cargarDropdownStock();
                 }
-            } catch (e) { alert("Error de servidor."); }
+            } catch (e) { alert("Error de servidor al guardar."); }
         }
 
        async function cargarDropdownStock() {
-            const r = await fetch('/api/productos');
+            // ¡AGREGAMOS EL PASAPORTE A LA DIRECCIÓN!
+            const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
             const d = await r.json();
-            productosParaStock = d.productos;
+            productosParaStock = d; // Python ahora manda la lista directa
             document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
-                d.productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
+                d.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
         }
 
         function cargarPrecioActual() {
@@ -141,7 +149,7 @@
             if (!id || isNaN(cant) || cant <= 0 || isNaN(nPrecio) || isNaN(nCosto)) return alert("Completa todos los campos");
 
             try {
-                const r = await fetch('/api/admin/stock', {
+                const r = await fetch('/api/admin/stock?empresa_id=' + mi_empresa, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ id_producto: id, cantidad: cant, nuevo_precio: nPrecio, nuevo_costo: nCosto })
@@ -157,7 +165,7 @@
         }
 
         async function cargarHistorialVentas() {
-            const r = await fetch('/api/admin/ventas');
+            const r = await fetch('/api/admin/ventas?empresa_id=' + mi_empresa);
             const d = await r.json();
             document.getElementById('tabla-ventas').innerHTML = d.ventas.length === 0 ? 
                 '<tr><td colspan="4" style="text-align:center;">No hay ventas</td></tr>' :
@@ -165,9 +173,10 @@
         }
 
        async function cargarCatalogoAdmin() {
-            const r = await fetch('/api/productos');
+            // ¡AGREGAMOS EL PASAPORTE A LA DIRECCIÓN!
+            const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
             const d = await r.json();
-            document.getElementById('tabla-catalogo').innerHTML = d.productos.map(p => `
+            document.getElementById('tabla-catalogo').innerHTML = d.map(p => `
                 <tr>
                     <td>${p.id}</td><td><b>${p.nombre}</b></td><td style="color:#17a2b8;">$${p.costo}</td><td>$${p.precio}</td>
                     <td style="color: ${p.stock <= 5 ? 'red' : 'black'}; font-weight: bold;">${Number(p.stock.toFixed(3))}</td>
@@ -175,9 +184,9 @@
                 </tr>`).join('');
         }
 
-        async function eliminarProducto(id) {
+      async function eliminarProducto(id) {
             if (!confirm("¿Eliminar este material?")) return;
-            await fetch(`/api/admin/productos/${id}`, { method: 'DELETE' });
+            await fetch('/api/admin/productos/' + id + '?empresa_id=' + mi_empresa, { method: 'DELETE' });
             cargarCatalogoAdmin(); cargarDropdownStock(); 
         }
 

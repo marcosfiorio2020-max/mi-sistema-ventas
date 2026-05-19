@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso - Mini SAP SaaS</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .caja-login { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: #1e293b; margin-bottom: 25px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; color: white; transition: 0.2s; margin-bottom: 10px; }
+        .btn-entrar { background-color: #007bff; }
+        .btn-entrar:hover { background-color: #0056b3; }
+        .btn-registro { background-color: #28a745; }
+        .btn-registro:hover { background-color: #218838; }
+        .mensaje { font-size: 14px; color: #dc3545; margin-top: 10px; height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="caja-login">
+        <h2>Bienvenido a Mini SAP</h2>
+        <input type="text" id="usuario" placeholder="Nombre de tu negocio (Usuario)">
+        <input type="password" id="password" placeholder="Contraseña">
+        
+        <button class="btn-entrar" onclick="ingresar()">Iniciar Sesión</button>
+        <button class="btn-registro" onclick="registrar()">Crear Cuenta Nueva</button>
+        <div id="msj-error" class="mensaje"></div>
+    </div>
+
+    <script>
+        async function ingresar() {
+            const u = document.getElementById('usuario').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if(!u || !p) return mostrarError("Completa todos los campos");
+
+            try {
+                let r = await fetch('/api/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: u, password: p })
+                });
+                let d = await r.json();
+                
+                if(d.status === "success") {
+                    // ¡LA MAGIA OCURRE AQUÍ! Guardamos la "llave" en el celular del cliente
+                    localStorage.setItem("mi_empresa_id", d.empresa_id);
+                    window.location.href = "/mostrador"; 
+                } else {
+                    mostrarError("Usuario o contraseña incorrectos");
+                }
+            } catch (e) { mostrarError("Error al conectar con el servidor"); }
+        }
+
+        async function registrar() {
+            const u = document.getElementById('usuario').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if(!u || !p) return mostrarError("Completa todos los campos para registrarte");
+
+            try {
+                let r = await fetch('/api/registro', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: u, password: p })
+                });
+                
+                if(r.ok) {
+                    alert("¡Cuenta creada con éxito! Ahora inicia sesión.");
+                } else {
+                    mostrarError("El nombre de negocio ya está en uso");
+                }
+            } catch (e) { mostrarError("Error al conectar con el servidor"); }
+        }
+
+        function mostrarError(texto) { document.getElementById('msj-error').innerText = texto; }
+    </script>
+</body>
+</html>
