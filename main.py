@@ -10,7 +10,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
 # Guardamos tu link secreto
-URL_BASE_DATOS = "postgresql://postgres:Pericles.12021985@db.xvhkgfmomzyqknudiuum.supabase.co:6543/postgres"
+URL_BASE_DATOS = "postgresql://neondb_owner:npg_EaVGnUC3obt2@ep-bitter-mud-ac5lh1s6.sa-east-1.aws.neon.tech/neondb?sslmode=require"
 
 app = FastAPI()
 
