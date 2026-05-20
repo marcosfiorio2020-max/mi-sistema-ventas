@@ -30,14 +30,8 @@
         <input type="text" id="inputNombre" placeholder="Nombre del Producto" style="width: 30%;">
         <input type="number" id="inputPrecio" placeholder="Precio Venta ($)" style="width: 15%;">
         
-        <select id="inputCategoria" style="width: 20%;">
-            <option value="Almacén">Almacén</option>
-            <option value="Bebidas">Bebidas</option>
-            <option value="Kiosco">Kiosco</option>
-            <option value="Limpieza">Limpieza</option>
-            <option value="Lácteos">Lácteos</option>
-            <option value="General">General</option>
-        </select><br>
+        <input type="text" id="inputCategoria" list="listaCategorias" placeholder="Categoría" style="width: 20%;">
+        <datalist id="listaCategorias"></datalist><br>
 
         <input type="number" id="inputStock" placeholder="Stock Inicial" style="width: 15%;">
         <input type="number" id="inputCosto" placeholder="Costo Proveedor ($)" style="width: 20%; border-color: #17a2b8;"> 
@@ -107,7 +101,7 @@
                 nombre: nombreProd,
                 precio: precioProd,
                 unidad: document.getElementById('selectUnidad').value,
-                categoria: document.getElementById('inputCategoria').value,
+                categoria: document.getElementById('inputCategoria').value || "General",
                 stock: stockProd,
                 costo: costoProd,
                 empresa_id: mi_empresa 
@@ -127,6 +121,7 @@
                     document.getElementById('inputPrecio').value = '';
                     document.getElementById('inputStock').value = '';
                     document.getElementById('inputCosto').value = '';
+                    // No limpiamos la categoría para que sea más fácil cargar varios productos del mismo tipo seguidos
                     cargarCatalogoAdmin();
                     cargarDropdownStock();
                 }
@@ -137,8 +132,14 @@
             const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
             const d = await r.json();
             productosParaStock = d; 
+            
+            // Llenamos el desplegable de stock
             document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
                 d.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
+                
+            // Extraemos las categorías únicas de la base de datos y llenamos las sugerencias
+            let catUnicas = [...new Set(d.map(p => p.categoria).filter(c => c))];
+            document.getElementById('listaCategorias').innerHTML = catUnicas.map(c => `<option value="${c}">`).join('');
         }
 
         function cargarPrecioActual() {
