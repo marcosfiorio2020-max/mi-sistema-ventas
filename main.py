@@ -193,7 +193,6 @@ def registrar_venta(venta: PaqueteVenta, empresa_id: str):
     cursor = conexion.cursor()
     fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        # ¡AQUI ESTABA EL ERROR 500! Se corrigió el orden a: fecha, metodo_pago, total, empresa_id
         cursor.execute(
             "INSERT INTO ventas_cabecera (fecha, metodo_pago, total, empresa_id) VALUES (%s, %s, %s, %s) RETURNING id",
             (fecha_actual, venta.metodo_pago, venta.total, empresa_id) 
@@ -236,6 +235,35 @@ def obtener_ventas_admin(empresa_id: str):
     conexion.close()
     return [{"id": f[0], "fecha": f[1], "metodo": f[2], "total": float(f[3])} for f in filas]
 
+# --- NUEVA FUNCIÓN: ANULAR TICKET Y DEVOLVER STOCK ---
+@app.delete("/api/admin/ventas/{id_venta}")
+def eliminar_venta(id_venta: int, empresa_id: str):
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    try:
+        # 1. Miramos qué productos tenía el ticket para devolverlos al stock
+        cursor.execute("SELECT producto, cantidad FROM ventas_detalle WHERE venta_id = %s AND empresa_id = %s", (id_venta, empresa_id))
+        detalles = cursor.fetchall()
+        
+        for d in detalles:
+            nombre_prod = d[0]
+            cant = float(d[1])
+            # Devolvemos el stock a la góndola
+            cursor.execute("UPDATE maestro_productos SET stock = stock + %s WHERE nombre = %s AND empresa_id = %s", (cant, nombre_prod, empresa_id))
+            
+        # 2. Borramos los registros del sistema
+        cursor.execute("DELETE FROM ventas_detalle WHERE venta_id = %s AND empresa_id = %s", (id_venta, empresa_id))
+        cursor.execute("DELETE FROM ventas_cabecera WHERE id = %s AND empresa_id = %s", (id_venta, empresa_id))
+        
+        conexion.commit()
+        return {"status": "success"}
+    except Exception as e:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cursor.close()
+        conexion.close()
+
 @app.get("/api/dashboard")
 def obtener_dashboard(empresa_id: str):
     conexion = psycopg2.connect(URL_BASE_DATOS)
@@ -261,10 +289,20 @@ def obtener_dashboard(empresa_id: str):
                       WHERE c.fecha LIKE %s AND c.empresa_id = %s''', (hoy_busqueda, empresa_id))
     ganancia_hoy = float(cursor.fetchone()[0] or 0)
     
+    # NUEVA LÓGICA: GANANCIA MES REAL (Descontando Gastos Fijos)
+    # 1. Sacamos la ganancia bruta de los productos vendidos
     cursor.execute('''SELECT SUM(d.subtotal - (d.cantidad * d.costo_unitario)) 
                       FROM ventas_detalle d JOIN ventas_cabecera c ON d.venta_id = c.id 
                       WHERE c.fecha LIKE %s AND c.empresa_id = %s''', (mes_busqueda, empresa_id))
-    ganancia_mes = float(cursor.fetchone()[0] or 0)
+    ganancia_bruta_mes = float(cursor.fetchone()[0] or 0)
+    
+    # 2. Sumamos todo lo que cargó en el calendario de ese mes (Alquiler, Luz, etc)
+    cursor.execute('''SELECT SUM(monto) FROM calendario_financiero 
+                      WHERE fecha LIKE %s AND empresa_id = %s''', (mes_busqueda, empresa_id))
+    gastos_fijos_mes = float(cursor.fetchone()[0] or 0)
+    
+    # 3. La ganancia real es la Bruta menos los Gastos Fijos
+    ganancia_mes = ganancia_bruta_mes - gastos_fijos_mes
     
     cursor.execute('''SELECT producto, SUM(cantidad) as cant FROM ventas_detalle 
                       WHERE empresa_id = %s GROUP BY producto ORDER BY cant DESC LIMIT 5''', (empresa_id,))
