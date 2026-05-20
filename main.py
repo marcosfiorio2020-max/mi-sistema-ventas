@@ -9,7 +9,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 
-# Guardamos tu link secreto
 URL_BASE_DATOS = "postgresql://neondb_owner:npg_EaVGnUC3obt2@ep-bitter-mud-ac5lh1s6.sa-east-1.aws.neon.tech/neondb?sslmode=require"
 
 app = FastAPI()
@@ -68,7 +67,6 @@ def inicializar_base_datos():
 
 inicializar_base_datos()
 
-# --- MODELOS DE DATOS ---
 class Producto(BaseModel):
     id: str
     nombre: str
@@ -112,7 +110,6 @@ class UsuarioLogin(BaseModel):
     usuario: str
     password: str
 
-# --- RUTAS DE SEGURIDAD ---
 @app.post("/api/registro")
 def registro(user: UsuarioLogin):
     conexion = psycopg2.connect(URL_BASE_DATOS)
@@ -144,7 +141,6 @@ def login(user: UsuarioLogin):
     else:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
-# --- RUTAS DE PRODUCTOS ---
 @app.post("/api/admin/productos")
 def guardar_producto(p: Producto):
     conexion = psycopg2.connect(URL_BASE_DATOS)
@@ -191,21 +187,20 @@ def eliminar_producto(id_producto: str, empresa_id: str):
     conexion.close()
     return {"status": "success"}
 
-# --- RUTAS DE VENTAS ---
 @app.post("/api/ventas")
 def registrar_venta(venta: PaqueteVenta, empresa_id: str):
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
+        # ¡AQUI ESTABA EL ERROR 500! Se corrigió el orden a: fecha, metodo_pago, total, empresa_id
         cursor.execute(
             "INSERT INTO ventas_cabecera (fecha, metodo_pago, total, empresa_id) VALUES (%s, %s, %s, %s) RETURNING id",
-            (fecha_actual, venta.total, venta.metodo_pago, empresa_id)
+            (fecha_actual, venta.metodo_pago, venta.total, empresa_id) 
         )
         venta_id = cursor.fetchone()[0]
         
         for d in venta.detalles:
-            # Buscamos el costo original en la nube para calcular ganancias luego
             cursor.execute("SELECT costo FROM maestro_productos WHERE nombre = %s AND empresa_id = %s", (d.nombre, empresa_id))
             res_costo = cursor.fetchone()
             costo_u = float(res_costo[0]) if res_costo else 0.0
@@ -241,7 +236,6 @@ def obtener_ventas_admin(empresa_id: str):
     conexion.close()
     return [{"id": f[0], "fecha": f[1], "metodo": f[2], "total": float(f[3])} for f in filas]
 
-# --- RUTAS DEL DASHBOARD Y REPORTES ---
 @app.get("/api/dashboard")
 def obtener_dashboard(empresa_id: str):
     conexion = psycopg2.connect(URL_BASE_DATOS)

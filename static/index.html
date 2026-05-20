@@ -40,7 +40,7 @@
         .btn-billetera { background-color: #009ee3; } 
         .btn-tarjeta { background-color: #f39c12; } 
         .btn-cancelar { margin-top: 25px; padding: 10px 20px; border: none; background-color: #dc3545; color: white; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        /* Adaptación para celulares */
+        
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; }
             .catalogo { flex: none; width: 100%; }
@@ -83,27 +83,24 @@
     </div>
 
     <script>
-        // Sacamos el pasaporte de la memoria del celular/PC
         const mi_empresa = localStorage.getItem("mi_empresa_id");
+        if (!mi_empresa) { window.location.href = "/"; }
         
-        // Si no tiene pasaporte, lo pateamos a la puerta (Login)
-        if (!mi_empresa) {
-            window.location.href = "/"; 
-        }
         let todosLosProductos = []; 
         let carrito = []; 
+        let categoriaActiva = 'Todos'; // Memoria para evitar que la categoría salte
 
         async function cargarProductos() {
             try {
                 let respuesta = await fetch('/api/productos?empresa_id=' + mi_empresa);
-                let d = await respuesta.json(); // Corregimos "r" por "respuesta"
-                todosLosProductos = d; // Corregimos para leer la lista directa que manda Python
+                todosLosProductos = await respuesta.json(); 
                 dibujarBotonesCategorias(); 
-                mostrarCategoria('Todos'); 
+                mostrarCategoria(categoriaActiva); // Respeta la categoría actual
             } catch (e) { 
                 console.error("Detalle del error:", e); 
             }
         }
+
         function dibujarBotonesCategorias() {
             const cont = document.getElementById('contenedor-categorias');
             cont.innerHTML = `<button class="btn-categoria" id="btn-cat-Todos" onclick="mostrarCategoria('Todos')">📦 Todos</button>`;
@@ -116,6 +113,7 @@
         }
 
         function mostrarCategoria(categoria) {
+            categoriaActiva = categoria; // Guarda la selección
             document.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('activo'));
             let btnSel = document.getElementById(`btn-cat-${categoria}`);
             if(btnSel) btnSel.classList.add('activo');
@@ -123,13 +121,17 @@
             const cont = document.getElementById('contenedor-productos');
             let filtrados = categoria === 'Todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoria);
 
-            cont.innerHTML = filtrados.map(p => `
-                <div class="tarjeta-producto" onclick="agregarAlCarrito('${p.nombre}', ${p.precio}, '${p.unidad}', ${p.stock})">
+            cont.innerHTML = filtrados.map(p => {
+                // Blindaje contra comillas simples en el nombre del producto
+                let nombreSeguro = p.nombre.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return `
+                <div class="tarjeta-producto" onclick="agregarAlCarrito('${nombreSeguro}', ${p.precio}, '${p.unidad}', ${p.stock})">
                     <strong>${p.nombre}</strong><br>
                     <div class="precio">$${p.precio}</div>
                     <div class="unidad-badge">📦 Disp: ${Number(p.stock.toFixed(3))}</div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function ventaManual() {

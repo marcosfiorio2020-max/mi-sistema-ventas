@@ -29,7 +29,16 @@
         <input type="text" id="inputID" placeholder="ID (ej: A005)" style="width: 15%;">
         <input type="text" id="inputNombre" placeholder="Nombre del Producto" style="width: 30%;">
         <input type="number" id="inputPrecio" placeholder="Precio Venta ($)" style="width: 15%;">
-        <input type="text" id="inputCategoria" placeholder="Categoría" style="width: 20%;"><br>
+        
+        <select id="inputCategoria" style="width: 20%;">
+            <option value="Almacén">Almacén</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Kiosco">Kiosco</option>
+            <option value="Limpieza">Limpieza</option>
+            <option value="Lácteos">Lácteos</option>
+            <option value="General">General</option>
+        </select><br>
+
         <input type="number" id="inputStock" placeholder="Stock Inicial" style="width: 15%;">
         <input type="number" id="inputCosto" placeholder="Costo Proveedor ($)" style="width: 20%; border-color: #17a2b8;"> 
         <select id="selectUnidad" style="width: 15%;">
@@ -73,12 +82,8 @@
     </div>
 
     <script>
-    
-        // 1. EL CONTROL DE SEGURIDAD (Sacamos el pasaporte)
         const mi_empresa = localStorage.getItem("mi_empresa_id");
-        if (!mi_empresa) {
-            window.location.href = "/"; // Si no hay pasaporte, al login
-        }
+        if (!mi_empresa) { window.location.href = "/"; }
 
         let productosParaStock = [];
 
@@ -102,10 +107,10 @@
                 nombre: nombreProd,
                 precio: precioProd,
                 unidad: document.getElementById('selectUnidad').value,
-                categoria: document.getElementById('inputCategoria').value || "General",
+                categoria: document.getElementById('inputCategoria').value,
                 stock: stockProd,
                 costo: costoProd,
-                empresa_id: mi_empresa // ¡AQUÍ AGREGAMOS EL PASAPORTE AL GUARDAR!
+                empresa_id: mi_empresa 
             };
 
             try {
@@ -117,7 +122,11 @@
                 const res = await r.json();
                 if(res.status === "success") {
                     alert("✅ Producto guardado correctamente");
-                    document.querySelectorAll('input').forEach(i => i.value = ''); // Limpia todo
+                    document.getElementById('inputID').value = '';
+                    document.getElementById('inputNombre').value = '';
+                    document.getElementById('inputPrecio').value = '';
+                    document.getElementById('inputStock').value = '';
+                    document.getElementById('inputCosto').value = '';
                     cargarCatalogoAdmin();
                     cargarDropdownStock();
                 }
@@ -125,10 +134,9 @@
         }
 
        async function cargarDropdownStock() {
-            // ¡AGREGAMOS EL PASAPORTE A LA DIRECCIÓN!
             const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
             const d = await r.json();
-            productosParaStock = d; // Python ahora manda la lista directa
+            productosParaStock = d; 
             document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
                 d.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
         }
@@ -167,13 +175,12 @@
         async function cargarHistorialVentas() {
             const r = await fetch('/api/admin/ventas?empresa_id=' + mi_empresa);
             const d = await r.json();
-            document.getElementById('tabla-ventas').innerHTML = d.ventas.length === 0 ? 
+            document.getElementById('tabla-ventas').innerHTML = d.length === 0 ? 
                 '<tr><td colspan="4" style="text-align:center;">No hay ventas</td></tr>' :
-                d.ventas.map(v => `<tr><td><b>#${v.id}</b></td><td>${v.fecha}</td><td>${v.metodo}</td><td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td></tr>`).join('');
+                d.map(v => `<tr><td><b>#${v.id}</b></td><td>${v.fecha}</td><td>${v.metodo}</td><td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td></tr>`).join('');
         }
 
        async function cargarCatalogoAdmin() {
-            // ¡AGREGAMOS EL PASAPORTE A LA DIRECCIÓN!
             const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
             const d = await r.json();
             document.getElementById('tabla-catalogo').innerHTML = d.map(p => `
