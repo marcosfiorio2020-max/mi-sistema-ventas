@@ -58,8 +58,8 @@
         <button onclick="cargarHistorialVentas()" style="background-color: #6c757d;">🔄 Actualizar Historial</button>
         <div class="scroll-table">
             <table>
-                <thead><tr><th>Ticket N°</th><th>Fecha y Hora</th><th>Método de Pago</th><th>Total</th></tr></thead>
-                <tbody id="tabla-ventas"><tr><td colspan="4" style="text-align: center;">Cargando...</td></tr></tbody>
+                <thead><tr><th>Ticket N°</th><th>Fecha y Hora</th><th>Método de Pago</th><th>Total</th><th style="text-align: center;">Acción</th></tr></thead>
+                <tbody id="tabla-ventas"><tr><td colspan="5" style="text-align: center;">Cargando...</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -121,7 +121,6 @@
                     document.getElementById('inputPrecio').value = '';
                     document.getElementById('inputStock').value = '';
                     document.getElementById('inputCosto').value = '';
-                    // No limpiamos la categoría para que sea más fácil cargar varios productos del mismo tipo seguidos
                     cargarCatalogoAdmin();
                     cargarDropdownStock();
                 }
@@ -133,11 +132,9 @@
             const d = await r.json();
             productosParaStock = d; 
             
-            // Llenamos el desplegable de stock
             document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
                 d.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
                 
-            // Extraemos las categorías únicas de la base de datos y llenamos las sugerencias
             let catUnicas = [...new Set(d.map(p => p.categoria).filter(c => c))];
             document.getElementById('listaCategorias').innerHTML = catUnicas.map(c => `<option value="${c}">`).join('');
         }
@@ -177,8 +174,32 @@
             const r = await fetch('/api/admin/ventas?empresa_id=' + mi_empresa);
             const d = await r.json();
             document.getElementById('tabla-ventas').innerHTML = d.length === 0 ? 
-                '<tr><td colspan="4" style="text-align:center;">No hay ventas</td></tr>' :
-                d.map(v => `<tr><td><b>#${v.id}</b></td><td>${v.fecha}</td><td>${v.metodo}</td><td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td></tr>`).join('');
+                '<tr><td colspan="5" style="text-align:center;">No hay ventas</td></tr>' :
+                d.map(v => `
+                <tr>
+                    <td><b>#${v.id}</b></td>
+                    <td>${v.fecha}</td>
+                    <td>${v.metodo}</td>
+                    <td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td>
+                    <td style="text-align: center;">
+                        <button onclick="eliminarVenta(${v.id})" style="background: #dc3545; padding: 4px 8px; color: white; border: none; border-radius: 4px; cursor: pointer;">Anular</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        // NUEVA FUNCIÓN PARA ANULAR TICKETS DESDE LA PANTALLA
+        async function eliminarVenta(id) {
+            if (!confirm("⚠️ ¿Estás seguro de anular este ticket? La plata se restará de la facturación y la mercadería volverá automáticamente al stock.")) return;
+            
+            try {
+                const r = await fetch(`/api/admin/ventas/${id}?empresa_id=${mi_empresa}`, { method: 'DELETE' });
+                if ((await r.json()).status === 'success') {
+                    alert("✅ Ticket anulado y mercadería devuelta al stock.");
+                    cargarHistorialVentas(); // Recarga la lista de tickets
+                    cargarCatalogoAdmin(); // Recarga la tabla de abajo para que veas el stock actualizado
+                    cargarDropdownStock(); 
+                }
+            } catch (e) { alert("Error al anular venta."); }
         }
 
        async function cargarCatalogoAdmin() {
