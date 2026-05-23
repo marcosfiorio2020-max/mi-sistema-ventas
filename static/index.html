@@ -7,31 +7,25 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; display: flex; background-color: #f0f2f5; }
-        
         .catalogo { flex: 7; padding: 20px; display: flex; flex-direction: column; }
         .categorias { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .btn-categoria { padding: 10px 15px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background: #f8f9fa; border-radius: 5px; }
         .btn-categoria.activo { background: #007bff; color: white; border-color: #0056b3; }
         .btn-categoria:hover { background-color: #e4e6eb; }
-
         .btn-manual { padding: 10px 15px; font-weight: bold; cursor: pointer; background: #ffc107; border: none; border-radius: 5px; }
         .btn-admin { padding: 10px 15px; font-weight: bold; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 5px; margin-left: auto; }
         .btn-admin:hover { background-color: #5a6268; }
-
         .grilla-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
         .tarjeta-producto { background-color: white; border: 1px solid #ddd; padding: 15px 10px; border-radius: 5px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 0.9em; }
         .tarjeta-producto:hover { border-color: #007bff; background: #f0f8ff; }
         .precio { color: #28a745; font-weight: bold; font-size: 18px; margin-top: 10px; }
         .unidad-badge { font-size: 12px; color: #666; background: #eee; padding: 3px 8px; border-radius: 10px; display: inline-block; margin-top: 5px; }
-        
         .carrito { flex: 3; background-color: white; padding: 20px; border-left: 2px solid #ddd; display: flex; flex-direction: column; justify-content: space-between; }
         .lista-items { flex-grow: 1; border-bottom: 1px solid #eee; margin-bottom: 20px; color: #333; overflow-y: auto; }
         .item-carrito { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
-        
         .total-seccion { font-size: 28px; font-weight: bold; text-align: right; margin-bottom: 20px; color: #d9534f; }
         .btn-cobrar { padding: 20px; font-size: 24px; background-color: #28a745; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-cobrar:hover { background-color: #218838; }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
         .modal-contenido { background-color: white; padding: 40px; border-radius: 15px; text-align: center; width: 400px; box-shadow: 0 5px 20px rgba(0,0,0,0.4); }
         .botones-pago { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; }
@@ -40,7 +34,6 @@
         .btn-billetera { background-color: #009ee3; } 
         .btn-tarjeta { background-color: #f39c12; } 
         .btn-cancelar { margin-top: 25px; padding: 10px 20px; border: none; background-color: #dc3545; color: white; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; }
             .catalogo { flex: none; width: 100%; }
@@ -83,22 +76,21 @@
     </div>
 
     <script>
-        const mi_empresa = localStorage.getItem("mi_empresa_id");
-        if (!mi_empresa) { window.location.href = "/"; }
+        const mi_token = localStorage.getItem("mi_token_sap");
+        if (!mi_token) { window.location.href = "/"; }
         
         let todosLosProductos = []; 
         let carrito = []; 
-        let categoriaActiva = 'Todos'; // Memoria para evitar que la categoría salte
+        let categoriaActiva = 'Todos';
 
         async function cargarProductos() {
             try {
-                let respuesta = await fetch('/api/productos?empresa_id=' + mi_empresa);
+                let respuesta = await fetch('/api/productos?token=' + mi_token);
+                if (respuesta.status === 401 || respuesta.status === 403) window.location.href = "/";
                 todosLosProductos = await respuesta.json(); 
                 dibujarBotonesCategorias(); 
-                mostrarCategoria(categoriaActiva); // Respeta la categoría actual
-            } catch (e) { 
-                console.error("Detalle del error:", e); 
-            }
+                mostrarCategoria(categoriaActiva);
+            } catch (e) { console.error("Error al cargar productos."); }
         }
 
         function dibujarBotonesCategorias() {
@@ -113,7 +105,7 @@
         }
 
         function mostrarCategoria(categoria) {
-            categoriaActiva = categoria; // Guarda la selección
+            categoriaActiva = categoria;
             document.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('activo'));
             let btnSel = document.getElementById(`btn-cat-${categoria}`);
             if(btnSel) btnSel.classList.add('activo');
@@ -122,7 +114,6 @@
             let filtrados = categoria === 'Todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoria);
 
             cont.innerHTML = filtrados.map(p => {
-                // Blindaje contra comillas simples en el nombre del producto
                 let nombreSeguro = p.nombre.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                 return `
                 <div class="tarjeta-producto" onclick="agregarAlCarrito('${nombreSeguro}', ${p.precio}, '${p.unidad}', ${p.stock})">
@@ -140,7 +131,6 @@
             let pStr = prompt(`Ingrese el precio para ${n}:`);
             let p = parseFloat(pStr);
             if (isNaN(p) || p <= 0) return alert("Precio inválido.");
-            
             agregarAlCarrito(n, p, "Unidad", 999999, true);
         }
 
@@ -156,19 +146,13 @@
             let itemExist = carrito.find(i => i.nombre === nombre);
             let cantFutura = itemExist ? itemExist.cantidad + cantidadAAgregar : cantidadAAgregar;
 
-            if (cantFutura > stockDisponible) {
-                return alert(`⚠️ ¡Sin stock suficiente! Solo quedan ${Number(stockDisponible.toFixed(3))} de ${nombre}.`);
-            }
+            if (cantFutura > stockDisponible) return alert(`⚠️ ¡Sin stock! Quedan ${Number(stockDisponible.toFixed(3))} de ${nombre}.`);
 
             if (itemExist) {
                 itemExist.cantidad += cantidadAAgregar;
                 itemExist.subtotal = itemExist.cantidad * itemExist.precio;
             } else {
-                carrito.push({ 
-                    nombre: nombre, precio: precio, cantidad: cantidadAAgregar, 
-                    unidad: unidad, subtotal: precio * cantidadAAgregar,
-                    esManual: esManual
-                });
+                carrito.push({ nombre: nombre, precio: precio, cantidad: cantidadAAgregar, unidad: unidad, subtotal: precio * cantidadAAgregar, esManual: esManual });
             }
             actualizarPantallaTicket();
         }
@@ -181,7 +165,6 @@
                 tot.innerText = 'Total: $0.00';
                 return;
             }
-
             let total = 0;
             pant.innerHTML = carrito.map(i => {
                 total += i.subtotal;
@@ -191,38 +174,20 @@
             tot.innerText = `Total: $${total.toFixed(2)}`;
         }
 
-        function vaciarTicket() {
-            if(confirm("¿Borrar todo el ticket actual?")) { carrito = []; actualizarPantallaTicket(); }
-        }
+        function vaciarTicket() { if(confirm("¿Borrar todo el ticket actual?")) { carrito = []; actualizarPantallaTicket(); } }
 
         function abrirModal() {
             if(carrito.length === 0) return alert("El ticket está vacío.");
-
-            let errores = [];
-            carrito.forEach(item => {
-                let prodBD = todosLosProductos.find(p => p.nombre === item.nombre);
-                if (!prodBD && !item.esManual) {
-                    errores.push(`❌ "${item.nombre}" fue eliminado del catálogo.`);
-                } else if (prodBD && prodBD.stock < item.cantidad) {
-                    errores.push(`⚠️ Stock insuficiente para "${item.nombre}". Quedan ${Number(prodBD.stock.toFixed(3))}.`);
-                }
-            });
-
-            if (errores.length > 0) {
-                return alert("Actualiza el ticket:\n\n" + errores.join("\n"));
-            }
-
             let total = carrito.reduce((s, i) => s + i.subtotal, 0);
             document.getElementById('modal-total').innerText = `$${total.toFixed(2)}`;
             document.getElementById('modal-pago').style.display = 'flex';
         }
-
         function cerrarModal() { document.getElementById('modal-pago').style.display = 'none'; }
 
         async function procesarPago(metodo) {
             let total = carrito.reduce((s, i) => s + i.subtotal, 0);
             try {
-                let r = await fetch('/api/ventas?empresa_id=' + mi_empresa, {
+                let r = await fetch('/api/ventas?token=' + mi_token, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ metodo_pago: metodo, total: total, detalles: carrito })
                 });

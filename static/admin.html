@@ -15,16 +15,20 @@
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
         th { padding: 12px; background-color: #e9ecef; border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 1; }
         td { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        @media print {
+            body * { display: none !important; }
+            .form-admin:has(#tabla-catalogo), .form-admin:has(#tabla-catalogo) * { display: block !important; width: 100% !important; box-shadow: none !important; }
+            th:last-child, td:last-child { display: none !important; } 
+        }
     </style>
 </head>
 <body>
-    <div style="text-align: right; margin-bottom: 20px; max-width: 900px; margin-left: auto; margin-right: auto;">
-        <button onclick="window.location.href='dashboard.html'" style="background-color: #6f42c1; color: white; padding: 12px 25px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-            📊 VER DASHBOARD EN TIEMPO REAL
-        </button>
+    <div class="no-print" style="text-align: right; margin-bottom: 20px; max-width: 900px; margin-left: auto; margin-right: auto;">
+        <button onclick="window.location.href='dashboard.html'" style="background-color: #6f42c1; padding: 12px 25px; border-radius: 4px;">📊 VER DASHBOARD</button>
     </div>
     
-    <div class="form-admin">
+    <div class="form-admin no-print">
         <h2 style="color: #333;">📦 Gestión de Productos (Nuevo Material)</h2>
         <input type="text" id="inputID" placeholder="ID (ej: A005)" style="width: 15%;">
         <input type="text" id="inputNombre" placeholder="Nombre del Producto" style="width: 30%;">
@@ -36,29 +40,26 @@
         <input type="number" id="inputStock" placeholder="Stock Inicial" style="width: 15%;">
         <input type="number" id="inputCosto" placeholder="Costo Proveedor ($)" style="width: 20%; border-color: #17a2b8;"> 
         <select id="selectUnidad" style="width: 15%;">
-            <option value="Unidad">Unidad</option>
-            <option value="Kg">Kg</option>
+            <option value="Unidad">Unidad</option><option value="Kg">Kg</option>
         </select>
         <button onclick="guardarProducto()" style="width: 35%; background-color: #28a745;">GUARDAR PRODUCTO</button>
     </div>
 
-    <div class="form-admin">
+    <div class="form-admin no-print">
         <h2 style="color: #0056b3;">🚚 Ingreso de Mercadería (Proveedor)</h2>
-        <select id="selectProductoStock" onchange="cargarPrecioActual()" style="width: 30%;">
-            <option value="">Cargando catálogo...</option>
-        </select>
+        <select id="selectProductoStock" onchange="cargarPrecioActual()" style="width: 30%;"><option value="">Cargando...</option></select>
         <input type="number" id="inputCantidadStock" placeholder="Cant. recibida" style="width: 20%;">
         <input type="number" id="inputNuevoCosto" placeholder="Nuevo Costo ($)" style="width: 20%; border-color: #17a2b8;">
         <input type="number" id="inputNuevoPrecio" placeholder="Nuevo Precio ($)" style="width: 20%;">
         <button onclick="sumarStock()" style="width: 100%; margin-top: 10px; background-color: #17a2b8;">SUMAR STOCK Y ACTUALIZAR</button>
     </div>
 
-    <div class="form-admin">
+    <div class="form-admin no-print">
         <h2 style="color: #28a745;">📜 Historial de Tickets</h2>
-        <button onclick="cargarHistorialVentas()" style="background-color: #6c757d;">🔄 Actualizar Historial</button>
+        <button onclick="cargarHistorialVentas()" style="background-color: #6c757d;">🔄 Actualizar</button>
         <div class="scroll-table">
             <table>
-                <thead><tr><th>Ticket N°</th><th>Fecha y Hora</th><th>Método de Pago</th><th>Total</th><th style="text-align: center;">Acción</th></tr></thead>
+                <thead><tr><th>Ticket N°</th><th>Fecha</th><th>Pago</th><th>Total</th><th style="text-align: center;">Acción</th></tr></thead>
                 <tbody id="tabla-ventas"><tr><td colspan="5" style="text-align: center;">Cargando...</td></tr></tbody>
             </table>
         </div>
@@ -66,18 +67,19 @@
 
     <div class="form-admin">
         <h2 style="color: #dc3545;">📋 Stock en Uso (Catálogo Activo)</h2>
+        <button class="no-print" onclick="window.print()" style="background-color: #20c997; color: white; padding: 12px; border-radius: 6px; width: 100%; margin-bottom: 15px;">🖨️ IMPRIMIR REPORTE DE STOCK</button>
         <div class="scroll-table">
             <table>
-                <thead><tr><th>ID</th><th>Nombre</th><th>Costo</th><th>Precio</th><th>Stock</th><th style="text-align: center;">Acción</th></tr></thead>
+                <thead><tr><th>ID</th><th>Nombre</th><th>Costo</th><th>Precio</th><th>Stock</th><th class="no-print" style="text-align: center;">Acción</th></tr></thead>
                 <tbody id="tabla-catalogo"><tr><td colspan="6" style="text-align: center;">Cargando...</td></tr></tbody>
             </table>
         </div>
-        <button onclick="window.location.href='/mostrador'" style="margin-top: 25px; background-color: #333; width: 100%; padding: 15px; font-size: 16px;">⬅️ VOLVER AL MOSTRADOR</button>
+        <button class="no-print" onclick="window.location.href='/mostrador'" style="margin-top: 25px; background-color: #333; width: 100%; padding: 15px;">⬅️ VOLVER AL MOSTRADOR</button>
     </div>
 
     <script>
-        const mi_empresa = localStorage.getItem("mi_empresa_id");
-        if (!mi_empresa) { window.location.href = "/"; }
+        const mi_token = localStorage.getItem("mi_token_sap");
+        if (!mi_token) { window.location.href = "/"; }
 
         let productosParaStock = [];
 
@@ -85,57 +87,27 @@
             let idProd = document.getElementById('inputID').value.trim();
             let nombreProd = document.getElementById('inputNombre').value.trim();
             let precioProd = parseFloat(document.getElementById('inputPrecio').value);
-            
-            let valCosto = document.getElementById('inputCosto').value;
-            let costoProd = valCosto === "" ? 0 : parseFloat(valCosto);
-            
-            let valStock = document.getElementById('inputStock').value;
-            let stockProd = valStock === "" ? 0 : parseFloat(valStock);
+            let costoProd = parseFloat(document.getElementById('inputCosto').value || 0);
+            let stockProd = parseFloat(document.getElementById('inputStock').value || 0);
 
-            if (!idProd || !nombreProd) return alert("❌ ERROR: El ID y Nombre son obligatorios.");
-            if (isNaN(precioProd) || precioProd <= 0) return alert("❌ ERROR: El precio de venta debe ser mayor a 0.");
-            if (costoProd < 0) return alert("❌ ERROR: El costo no puede ser negativo.");
+            if (!idProd || !nombreProd || isNaN(precioProd) || precioProd <= 0 || costoProd < 0) return alert("❌ Datos inválidos.");
 
-            const nuevoProducto = {
-                id: idProd,
-                nombre: nombreProd,
-                precio: precioProd,
-                unidad: document.getElementById('selectUnidad').value,
-                categoria: document.getElementById('inputCategoria').value || "General",
-                stock: stockProd,
-                costo: costoProd,
-                empresa_id: mi_empresa 
-            };
+            const nuevoProducto = { id: idProd, nombre: nombreProd, precio: precioProd, unidad: document.getElementById('selectUnidad').value, categoria: document.getElementById('inputCategoria').value || "General", stock: stockProd, costo: costoProd };
 
             try {
-                const r = await fetch('/api/admin/productos', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(nuevoProducto)
-                });
-                const res = await r.json();
-                if(res.status === "success") {
-                    alert("✅ Producto guardado correctamente");
-                    document.getElementById('inputID').value = '';
-                    document.getElementById('inputNombre').value = '';
-                    document.getElementById('inputPrecio').value = '';
-                    document.getElementById('inputStock').value = '';
-                    document.getElementById('inputCosto').value = '';
-                    cargarCatalogoAdmin();
-                    cargarDropdownStock();
+                const r = await fetch('/api/admin/productos?token=' + mi_token, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(nuevoProducto) });
+                if((await r.json()).status === "success") {
+                    alert("✅ Producto guardado"); document.getElementById('inputID').value = ''; document.getElementById('inputNombre').value = '';
+                    cargarCatalogoAdmin(); cargarDropdownStock();
                 }
-            } catch (e) { alert("Error de servidor al guardar."); }
+            } catch (e) { alert("Error de servidor."); }
         }
 
        async function cargarDropdownStock() {
-            const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
-            const d = await r.json();
-            productosParaStock = d; 
-            
-            document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + 
-                d.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
-                
-            let catUnicas = [...new Set(d.map(p => p.categoria).filter(c => c))];
+            const r = await fetch('/api/productos?token=' + mi_token);
+            productosParaStock = await r.json(); 
+            document.getElementById('selectProductoStock').innerHTML = '<option value="">Seleccione producto...</option>' + productosParaStock.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${Number(p.stock.toFixed(3))})</option>`).join('');
+            let catUnicas = [...new Set(productosParaStock.map(p => p.categoria).filter(c => c))];
             document.getElementById('listaCategorias').innerHTML = catUnicas.map(c => `<option value="${c}">`).join('');
         }
 
@@ -152,70 +124,40 @@
             let nPrecio = parseFloat(document.getElementById('inputNuevoPrecio').value);
             let nCosto = parseFloat(document.getElementById('inputNuevoCosto').value);
 
-            if (!id || isNaN(cant) || cant <= 0 || isNaN(nPrecio) || isNaN(nCosto)) return alert("Completa todos los campos");
+            if (!id || isNaN(cant) || cant <= 0 || isNaN(nPrecio) || isNaN(nCosto)) return alert("Datos incompletos");
 
-            try {
-                const r = await fetch('/api/admin/stock?empresa_id=' + mi_empresa, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id_producto: id, cantidad: cant, nuevo_precio: nPrecio, nuevo_costo: nCosto })
-                });
-                if((await r.json()).status === 'success') {
-                    alert("✅ Stock actualizado");
-                    document.getElementById('inputCantidadStock').value = '';
-                    document.getElementById('selectProductoStock').value = '';
-                    cargarDropdownStock();
-                    cargarCatalogoAdmin();
-                }
-            } catch (e) { alert("Error de servidor"); }
+            const r = await fetch('/api/admin/stock?token=' + mi_token, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id_producto: id, cantidad: cant, nuevo_precio: nPrecio, nuevo_costo: nCosto }) });
+            if((await r.json()).status === 'success') {
+                alert("✅ Stock actualizado"); document.getElementById('inputCantidadStock').value = ''; cargarDropdownStock(); cargarCatalogoAdmin();
+            }
         }
 
         async function cargarHistorialVentas() {
-            const r = await fetch('/api/admin/ventas?empresa_id=' + mi_empresa);
+            const r = await fetch('/api/admin/ventas?token=' + mi_token);
             const d = await r.json();
-            document.getElementById('tabla-ventas').innerHTML = d.length === 0 ? 
-                '<tr><td colspan="5" style="text-align:center;">No hay ventas</td></tr>' :
-                d.map(v => `
-                <tr>
-                    <td><b>#${v.id}</b></td>
-                    <td>${v.fecha}</td>
-                    <td>${v.metodo}</td>
-                    <td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td>
-                    <td style="text-align: center;">
-                        <button onclick="eliminarVenta(${v.id})" style="background: #dc3545; padding: 4px 8px; color: white; border: none; border-radius: 4px; cursor: pointer;">Anular</button>
-                    </td>
-                </tr>`).join('');
+            document.getElementById('tabla-ventas').innerHTML = d.length === 0 ? '<tr><td colspan="5">No hay ventas</td></tr>' : d.map(v => `
+                <tr><td><b>#${v.id}</b></td><td>${v.fecha}</td><td>${v.metodo}</td><td style="color:green;font-weight:bold">$${v.total.toFixed(2)}</td>
+                <td style="text-align: center;"><button onclick="eliminarVenta(${v.id})" style="background:#dc3545; color:white; border:none; padding:4px; border-radius:4px; cursor:pointer;">Anular</button></td></tr>`).join('');
         }
 
-        // NUEVA FUNCIÓN PARA ANULAR TICKETS DESDE LA PANTALLA
         async function eliminarVenta(id) {
-            if (!confirm("⚠️ ¿Estás seguro de anular este ticket? La plata se restará de la facturación y la mercadería volverá automáticamente al stock.")) return;
-            
-            try {
-                const r = await fetch(`/api/admin/ventas/${id}?empresa_id=${mi_empresa}`, { method: 'DELETE' });
-                if ((await r.json()).status === 'success') {
-                    alert("✅ Ticket anulado y mercadería devuelta al stock.");
-                    cargarHistorialVentas(); // Recarga la lista de tickets
-                    cargarCatalogoAdmin(); // Recarga la tabla de abajo para que veas el stock actualizado
-                    cargarDropdownStock(); 
-                }
-            } catch (e) { alert("Error al anular venta."); }
+            if (!confirm("⚠️ ¿Anular ticket y devolver stock?")) return;
+            const r = await fetch(`/api/admin/ventas/${id}?token=${mi_token}`, { method: 'DELETE' });
+            if ((await r.json()).status === 'success') { alert("✅ Ticket anulado"); cargarHistorialVentas(); cargarCatalogoAdmin(); cargarDropdownStock(); }
         }
 
        async function cargarCatalogoAdmin() {
-            const r = await fetch('/api/productos?empresa_id=' + mi_empresa);
+            const r = await fetch('/api/productos?token=' + mi_token);
             const d = await r.json();
             document.getElementById('tabla-catalogo').innerHTML = d.map(p => `
-                <tr>
-                    <td>${p.id}</td><td><b>${p.nombre}</b></td><td style="color:#17a2b8;">$${p.costo}</td><td>$${p.precio}</td>
-                    <td style="color: ${p.stock <= 5 ? 'red' : 'black'}; font-weight: bold;">${Number(p.stock.toFixed(3))}</td>
-                    <td style="text-align: center;"><button onclick="eliminarProducto('${p.id}')" style="background: #dc3545; padding: 4px 8px; color: white; border: none; border-radius: 4px; cursor: pointer;">Eliminar</button></td>
-                </tr>`).join('');
+                <tr><td>${p.id}</td><td><b>${p.nombre}</b></td><td style="color:#17a2b8;">$${p.costo}</td><td>$${p.precio}</td>
+                <td style="color: ${p.stock <= 5 ? 'red' : 'black'}; font-weight: bold;">${Number(p.stock.toFixed(3))}</td>
+                <td class="no-print" style="text-align: center;"><button onclick="eliminarProducto('${p.id}')" style="background:#dc3545; color:white; border:none; padding:4px; border-radius:4px; cursor:pointer;">Eliminar</button></td></tr>`).join('');
         }
 
       async function eliminarProducto(id) {
             if (!confirm("¿Eliminar este material?")) return;
-            await fetch('/api/admin/productos/' + id + '?empresa_id=' + mi_empresa, { method: 'DELETE' });
+            await fetch('/api/admin/productos/' + id + '?token=' + mi_token, { method: 'DELETE' });
             cargarCatalogoAdmin(); cargarDropdownStock(); 
         }
 

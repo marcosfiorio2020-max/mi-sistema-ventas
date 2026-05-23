@@ -41,12 +41,12 @@
                 });
                 let d = await r.json();
                 
-                if(d.status === "success") {
-                    // ¡LA MAGIA OCURRE AQUÍ! Guardamos la "llave" en el celular del cliente
-                    localStorage.setItem("mi_empresa_id", d.empresa_id);
+                if(r.ok && d.status === "success") {
+                    localStorage.setItem("mi_token_sap", d.token); // EL TOKEN SEGURO
+                    localStorage.setItem("mi_empresa_id", d.empresa_id); 
                     window.location.href = "/mostrador"; 
                 } else {
-                    mostrarError("Usuario o contraseña incorrectos");
+                    mostrarError(d.detail || "Usuario o contraseña incorrectos");
                 }
             } catch (e) { mostrarError("Error al conectar con el servidor"); }
         }
