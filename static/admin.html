@@ -17,9 +17,13 @@
         td { padding: 12px; border-bottom: 1px solid #eee; }
         
         @media print {
-            body * { display: none !important; }
-            .form-admin:has(#tabla-catalogo), .form-admin:has(#tabla-catalogo) * { display: block !important; width: 100% !important; box-shadow: none !important; }
-            th:last-child, td:last-child { display: none !important; } 
+            body { background-color: white; padding: 0; }
+            .form-admin { display: none; } /* Oculta todas las cajas */
+            #panel-stock { display: block !important; box-shadow: none; width: 100%; max-width: 100%; margin: 0; padding: 0; }
+            #panel-stock h2 { text-align: center; color: black; border: none; }
+            .no-print, th:last-child, td:last-child { display: none !important; } /* Oculta botones y columna Acción */
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; color: black; }
         }
     </style>
 </head>
@@ -65,7 +69,7 @@
         </div>
     </div>
 
-    <div class="form-admin">
+    <div class="form-admin" id="panel-stock">
         <h2 style="color: #dc3545;">📋 Stock en Uso (Catálogo Activo)</h2>
         <button class="no-print" onclick="window.print()" style="background-color: #20c997; color: white; padding: 12px; border-radius: 6px; width: 100%; margin-bottom: 15px;">🖨️ IMPRIMIR REPORTE DE STOCK</button>
         <div class="scroll-table">

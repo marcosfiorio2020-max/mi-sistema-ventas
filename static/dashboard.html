@@ -174,18 +174,25 @@
             alert("Metas actualizadas"); cargarDashboard();
         }
 
+        // --- ASÍ DEBE QUEDAR (Modificado) ---
         async function cargarCalendario() {
             const r = await fetch('/api/calendario?token=' + mi_token);
             const d = await r.json();
-            document.getElementById('tabla-calendario').innerHTML = d.eventos.map((e, index) => `
-                <tr style="${index === 0 ? 'background-color: #fff3cd; font-weight: bold; border-left: 4px solid #ffc107;' : ''}">
-                    <td>${e.fecha} ${index === 0 ? '🚨' : ''}</td>
-                    <td style="color:${e.tipo === 'Cobro' ? '#22c55e' : '#ef4444'}"><b>${e.tipo}</b></td>
-                    <td>${e.descripcion}</td><td><b>$${e.monto}</b></td>
-                    <td><button class="btn-accion" style="background:#22c55e; padding:4px 8px" onclick="saldarEvento(${e.id})">Saldar</button>
-                    <button class="btn-accion" style="background:#ef4444; padding:4px 8px" onclick="eliminarGasto(${e.id})">🗑️</button></td>
-                </tr>`).join('');
-        }
+            document.getElementById('tabla-calendario').innerHTML = d.eventos.map((e) => `
+            <tr style="${e.estado === 'Pendiente' ? 'background-color: #fff3cd; border-left: 4px solid #ffc107;' : 'border-bottom: 1px solid #f1f5f9;'}">
+            <td>${e.fecha}</td>
+            <td style="color:${e.tipo === 'Cobro' ? '#22c55e' : '#ef4444'}"><b>${e.tipo}</b></td>
+            <td>
+                ${e.descripcion} 
+                <br><span style="font-size: 10px; font-weight: bold; color: ${e.estado === 'Pendiente' ? '#d97706' : '#64748b'};">[${e.estado.toUpperCase()}]</span>
+            </td>
+            <td><b>$${e.monto.toLocaleString('es-AR')}</b></td>
+            <td>
+                ${e.estado === 'Pendiente' ? `<button class="btn-accion" style="background:#22c55e; padding:4px 8px; margin-right:4px;" onclick="saldarEvento(${e.id})">Saldar</button>` : ''}
+                <button class="btn-accion" style="background:#ef4444; padding:4px 8px;" onclick="eliminarGasto(${e.id})">🗑️</button>
+            </td>
+        </tr>`).join('');
+}
 
         async function agregarEvento() {
             const ev = { fecha: document.getElementById('cal-fecha').value, tipo: document.getElementById('cal-tipo').value, monto: parseFloat(document.getElementById('cal-monto').value) || 0, descripcion: document.getElementById('cal-desc').value };
