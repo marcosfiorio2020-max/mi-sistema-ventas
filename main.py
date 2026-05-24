@@ -89,8 +89,6 @@ def pagina_mostrador(): return FileResponse("static/index.html")
 def pagina_admin(): return FileResponse("static/admin.html")
 @app.get("/dashboard.html")
 def pagina_dashboard(): return FileResponse("static/dashboard.html")
-@app.get("/superadmin.html")
-def pagina_superadmin(): return FileResponse("static/superadmin.html")
 
 # --- RUTAS API - AUTENTICACIÓN ---
 @app.post("/api/registro")
@@ -347,16 +345,19 @@ def actualizar_configuracion(config: Configuracion, token: str):
     conexion.close()
     return {"status": "success"}
 
+# --- ASÍ DEBE QUEDAR (Modificado) ---
 @app.get("/api/calendario")
 def obtener_calendario(token: str):
     empresa_id = verificar_token(token)
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
-    cursor.execute("SELECT id, fecha, tipo, monto, descripcion FROM calendario_financiero WHERE estado = 'Pendiente' AND empresa_id = %s ORDER BY fecha ASC", (empresa_id,))
+    # Cambios: quitamos el filtro de 'Pendiente' para traer todo, agregamos la columna 'estado' y ordenamos por fecha DESC
+    cursor.execute("SELECT id, fecha, tipo, monto, descripcion, estado FROM calendario_financiero WHERE empresa_id = %s ORDER BY fecha DESC", (empresa_id,))
     filas = cursor.fetchall()
     cursor.close()
     conexion.close()
-    return {"status": "success", "eventos": [{"id": f[0], "fecha": f[1], "tipo": f[2], "monto": float(f[3]), "descripcion": f[4]} for f in filas]}
+    # Retornamos el estado de cada registro (f[5]) hacia el frontend
+    return {"status": "success", "eventos": [{"id": f[0], "fecha": f[1], "tipo": f[2], "monto": float(f[3]), "descripcion": f[4], "estado": f[5]} for f in filas]}
 
 @app.post("/api/calendario")
 def agregar_evento(evento: EventoCalendario, token: str):
