@@ -10,10 +10,14 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 import jwt
+import os
+from dotenv import load_dotenv
 
 # --- CONFIGURACIÓN ---
-URL_BASE_DATOS = "postgresql://neondb_owner:npg_EaVGnUC3obt2@ep-bitter-mud-ac5lh1s6.sa-east-1.aws.neon.tech/neondb?sslmode=require"
-SECRET_KEY = "clave_maestra_super_segura_mini_sap" # En producción, esto va en variables de entorno
+load_dotenv() # Esto obliga a Python a leer el archivo .env
+
+URL_BASE_DATOS = os.environ.get("DATABASE_URL")
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 app = FastAPI()
 
@@ -85,6 +89,8 @@ def pagina_mostrador(): return FileResponse("static/index.html")
 def pagina_admin(): return FileResponse("static/admin.html")
 @app.get("/dashboard.html")
 def pagina_dashboard(): return FileResponse("static/dashboard.html")
+@app.get("/superadmin.html")
+def pagina_superadmin(): return FileResponse("static/superadmin.html")
 
 # --- RUTAS API - AUTENTICACIÓN ---
 @app.post("/api/registro")
