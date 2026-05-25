@@ -89,6 +89,8 @@ def pagina_mostrador(): return FileResponse("static/index.html")
 def pagina_admin(): return FileResponse("static/admin.html")
 @app.get("/dashboard.html")
 def pagina_dashboard(): return FileResponse("static/dashboard.html")
+@app.get("/superadmin.html")
+def pagina_superadmin(): return FileResponse("static/superadmin.html")
 
 # --- RUTAS API - AUTENTICACIÓN ---
 @app.post("/api/registro")
