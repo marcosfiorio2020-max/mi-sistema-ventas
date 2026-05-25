@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de SuperAdmin - Mini SAP</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e293b; color: white; padding: 20px; }
+        .contenedor { max-width: 800px; margin: auto; background-color: #334155; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { color: #38bdf8; text-align: center; border-bottom: 2px solid #475569; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; color: black; border-radius: 8px; overflow: hidden; }
+        th { background-color: #0f172a; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #cbd5e1; }
+        .btn-toggle { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-on { background-color: #22c55e; }
+        .btn-off { background-color: #ef4444; }
+        .btn-volver { display: block; margin: 20px auto; padding: 10px 20px; background: #64748b; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <h1>👑 CENTRO DE CONTROL SAAS</h1>
+        <p style="text-align: center; color: #94a3b8;">Gestión de clientes y suscripciones</p>
+        
+        <table>
+            <thead><tr><th>ID</th><th>Negocio (Usuario)</th><th>Estado</th><th>Acción</th></tr></thead>
+            <tbody id="tabla-usuarios"><tr><td colspan="4" style="text-align: center;">Cargando clientes...</td></tr></tbody>
+        </table>
+
+        <button class="btn-volver" onclick="window.location.href='/mostrador'">Volver a mi Mostrador</button>
+    </div>
+
+    <script>
+        const mi_token = localStorage.getItem("mi_token_sap");
+        if (!mi_token) { window.location.href = "/"; }
+
+        async function cargarUsuarios() {
+            try {
+                const r = await fetch('/api/superadmin/usuarios?token=' + mi_token);
+                if(r.status === 403) { alert("🚨 NO ERES EL SUPERADMINISTRADOR"); window.location.href = "/mostrador"; return; }
+                
+                const usuarios = await r.json();
+                document.getElementById('tabla-usuarios').innerHTML = usuarios.map(u => `
+                    <tr style="background-color: ${u.activo ? '#ffffff' : '#fecaca'};">
+                        <td><b>#${u.id}</b></td>
+                        <td>${u.usuario}</td>
+                        <td style="font-weight:bold; color: ${u.activo ? '#16a34a' : '#dc2626'}">${u.activo ? '✅ ACTIVO' : '❌ SUSPENDIDO'}</td>
+                        <td>
+                            <button class="btn-toggle ${u.activo ? 'btn-off' : 'btn-on'}" onclick="alternarEstado(${u.id})">
+                                ${u.activo ? 'Cortar Servicio' : 'Habilitar Servicio'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error("Error al cargar usuarios"); }
+        }
+
+        async function alternarEstado(id) {
+            if(!confirm("¿Seguro que deseas cambiar el estado de este cliente?")) return;
+            await fetch(`/api/superadmin/usuarios/${id}/toggle?token=${mi_token}`, { method: 'PUT' });
+            cargarUsuarios(); // Recarga la tabla para ver el cambio
+        }
+
+        cargarUsuarios();
+    </script>
+</body>
+</html>
